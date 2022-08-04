@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../argo-manifests/base
+
+resources:
+- ../../argo-manifests/cluster-install/argo-server-rbac
+- ../../argo-manifests/cluster-install/workflow-controller-rbac
+- artifact-repositories.yaml
+- minio-cred-secret.yaml
+
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: workflow-controller
+  spec:
+    replicas: 2
+    template:
+      metadata:
+        name: workflow-controller
+      spec:
+        affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - workflow-controller
+              topologyKey: kubernetes.io/hostname
+- |-
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: argo-server
+  spec:
+    type: LoadBalancer
+
+
+# declare ConfigMap from a ConfigMapGenerator
+configMapGenerator:
+- name: workflow-controller-configmap
+  behavior: merge
+  files:
+  - containerRuntimeExecutors=patches/config/container-runtime-executors.yaml
+  - artifactRepository=patches/config/artifact-repo.yaml
+  literals:
+  - containerRuntimeExecutor=emissary

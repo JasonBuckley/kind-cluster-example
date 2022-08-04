@@ -12,3 +12,6 @@ kubectl apply -f wf-sa.yaml
 # deploy argo-events
 kubectl create ns argo-events
 kustomize build argo-events/overlays/local/ | kubectl -n argo-events apply -f -
+
+# add minio-secret to default ns
+kubectl -n default apply -f minio/minio-cred-secret.yaml
